@@ -50,27 +50,35 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Revisar que estén los secretos
+        id: secretos
         env:
           B64: ${{ secrets.T24_KEYSTORE_B64 }}
           CLAVE: ${{ secrets.T24_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$B64" ] || [ -z "$CLAVE" ]; then
-            echo "::error::Faltan los secretos T24_KEYSTORE_B64 y/o T24_KEYSTORE_PASSWORD (ver archivo de RESPALDO)."
-            exit 1
+            echo "::warning::Faltan los secretos T24_KEYSTORE_B64 y/o T24_KEYSTORE_PASSWORD (ver archivo de RESPALDO). Se compila sólo para probar, sin publicar."
+            echo "firmado=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "$B64" | base64 -d > "$RUNNER_TEMP/t24.jks"
+            echo "firmado=si" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Colocar la clave de firma
-        env:
-          B64: ${{ secrets.T24_KEYSTORE_B64 }}
-        run: echo "$B64" | base64 -d > "$RUNNER_TEMP/t24.jks"
-
       - name: Compilar APK firmada
+        if: steps.secretos.outputs.firmado == 'si'
         env:
           T24_KEYSTORE_PATH: ${{ runner.temp }}/t24.jks
           T24_KEYSTORE_PASSWORD: ${{ secrets.T24_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Compilar de prueba (sin firma, no se publica)
+        if: steps.secretos.outputs.firmado != 'si'
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleRelease
+          echo "::error::Compiló bien, pero falta cargar los secretos de firma para publicar."
+          exit 1
 
       - name: Preparar publicación
         id: datos
