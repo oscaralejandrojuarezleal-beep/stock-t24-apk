@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  Página de carga de la APK. Sólo se ve la PRIMERA vez (o si se borran los datos):
+  descarga la app completa desde Apps Script y la deja guardada en el celular.
+  Después, el celular abre directamente la versión guardada.
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stock T24</title>
+<style>
+  html,body{margin:0;height:100%;background:linear-gradient(160deg,#00261f,#003d32 55%,#0b6b57);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .caja{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;box-sizing:border-box;text-align:center}
+  h1{margin:0;font-size:28px;letter-spacing:.04em}
+  small{opacity:.75;letter-spacing:.18em;font-weight:700}
+  p{margin:0;max-width:340px;line-height:1.5;opacity:.92}
+  .rueda{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;animation:g 1s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+  button{border:0;border-radius:14px;padding:13px 22px;font-weight:800;font-size:15px;background:#fff;color:#003d32}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<div class="caja">
+  <div><h1>STOCK T24</h1><small>QUILMES</small></div>
+  <div id="rueda" class="rueda"></div>
+  <p id="mensaje">Preparando la app…</p>
+  <button id="reintentar" class="oculto" onclick="iniciar()">Reintentar</button>
+</div>
+<script>
+  function mostrar(texto, conBoton) {
+    document.getElementById('mensaje').textContent = texto;
+    document.getElementById('rueda').classList.toggle('oculto', !!conBoton);
+    document.getElementById('reintentar').classList.toggle('oculto', !conBoton);
+  }
+  window.T24_APK_error = function (m) {
+    mostrar('No se pudo descargar la app: ' + m, true);
+  };
+  function iniciar() {
+    if (!window.T24Android) { mostrar('Error interno: falta el puente de Android.', true); return; }
+    var url = T24Android.apiUrl();
+    if (!url || url.indexOf('/exec') < 0) { mostrar('Falta configurar la dirección del servidor (Config.kt).', true); return; }
+    if (!T24Android.hayInternet()) { mostrar('La primera vez necesitás internet. Conectate y tocá Reintentar.', true); return; }
+    mostrar('Descargando la app… (sólo la primera vez)', false);
+    T24Android.actualizarApp();
+  }
+  iniciar();
+</script>
+</body>
+</html>
