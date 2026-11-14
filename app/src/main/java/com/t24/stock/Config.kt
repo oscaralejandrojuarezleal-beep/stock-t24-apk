@@ -24,6 +24,9 @@ object Config {
     /** Función del servidor que entrega la app completa. */
     const val FN_APP = "T24_apiAppApk"
 
+    /** Función liviana que devuelve la "huella" de la app publicada. */
+    const val FN_HUELLA = "T24_apiHuellaApp"
+
     /** Nombre del archivo APK publicado en GitHub. */
     const val ARCHIVO_APK = "Stock-T24.apk"
 

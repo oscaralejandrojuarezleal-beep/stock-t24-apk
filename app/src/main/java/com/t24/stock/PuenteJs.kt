@@ -27,6 +27,10 @@ class PuenteJs(private val act: MainActivity) {
     @JavascriptInterface
     fun buildLocal(): String = Actualizador.buildLocal(act)
 
+    /** true: Android ya revisa solo si hay versión nueva (la página no necesita hacerlo). */
+    @JavascriptInterface
+    fun revisaSolo(): Boolean = true
+
     /** Descarga la versión nueva de la app y recarga. Avisa errores con window.T24_APK_error(msg). */
     @JavascriptInterface
     fun actualizarApp() {

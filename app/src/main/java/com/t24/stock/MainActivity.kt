@@ -95,6 +95,9 @@ class MainActivity : ComponentActivity() {
         // ¿Hay una APK nueva publicada en GitHub? (como mucho cada 6 h; pregunta antes de instalar)
         ActualizadorApk.revisar(this)
 
+        // ¿Hay una versión nueva de la app en Apps Script? (lo revisa Android, no la página)
+        RevisarApp.revisar(this, forzar = true)
+
         if (Build.VERSION.SDK_INT >= 33 && !Notificaciones.permitido(this)) {
             pedirPermisoNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -188,6 +191,11 @@ class MainActivity : ComponentActivity() {
         } catch (e: ActivityNotFoundException) {
             // No hay app para abrirlo: se ignora.
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        RevisarApp.revisar(this)
     }
 
     fun recargar() {
