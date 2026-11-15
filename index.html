@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<!--
+  Stock T24 — página de carga de la versión web.
+  La primera vez baja la app completa desde Apps Script y la deja guardada en el navegador.
+  Las siguientes veces abre directo la versión guardada (app.html), al instante.
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#003d32">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stock T24">
+<title>Stock T24</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<style>
+  html,body{margin:0;height:100%;background:linear-gradient(160deg,#00261f,#003d32 55%,#0b6b57);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .caja{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;box-sizing:border-box;text-align:center}
+  h1{margin:0;font-size:28px;letter-spacing:.04em}
+  small{opacity:.75;letter-spacing:.18em;font-weight:700}
+  p{margin:0;max-width:340px;line-height:1.5;opacity:.92}
+  .rueda{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;animation:g 1s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+  button{border:0;border-radius:14px;padding:13px 22px;font-weight:800;font-size:15px;background:#fff;color:#003d32;cursor:pointer}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<div class="caja">
+  <div><h1>STOCK T24</h1><small>QUILMES</small></div>
+  <div id="rueda" class="rueda"></div>
+  <p id="mensaje">Abriendo…</p>
+  <button id="reintentar" class="oculto" type="button">Reintentar</button>
+</div>
+<script src="t24-web.js"></script>
+<script>
+(function () {
+  function mostrar(texto, conBoton) {
+    document.getElementById('mensaje').textContent = texto;
+    document.getElementById('rueda').classList.toggle('oculto', !!conBoton);
+    document.getElementById('reintentar').classList.toggle('oculto', !conBoton);
+  }
+  document.getElementById('reintentar').onclick = function () { iniciar(); };
+
+  function esperarControl() {
+    if (!('serviceWorker' in navigator)) return Promise.resolve(false);
+    return navigator.serviceWorker.register('sw.js').then(function () {
+      return navigator.serviceWorker.ready;
+    }).then(function () {
+      if (navigator.serviceWorker.controller) return true;
+      return new Promise(function (ok) {
+        navigator.serviceWorker.addEventListener('controllerchange', function () { ok(true); }, { once: true });
+        setTimeout(function () { ok(!!navigator.serviceWorker.controller); }, 4000);
+      });
+    }).catch(function () { return false; });
+  }
+
+  function abrirApp() { location.replace('app.html' + location.search + location.hash); }
+
+  function iniciar() {
+    mostrar('Abriendo…', false);
+    esperarControl().then(function (conSw) {
+      return (conSw ? T24Web.tieneApp() : Promise.resolve(false)).then(function (hay) {
+        if (hay) return abrirApp();
+        if (navigator.onLine === false) return mostrar('La primera vez necesitás internet. Conectate y tocá Reintentar.', true);
+        mostrar('Descargando la app… (sólo la primera vez)', false);
+        return T24Web.bajar().then(function (r) {
+          if (conSw) return abrirApp();
+          // Navegador sin guardado (modo privado, etc.): se muestra igual, sin guardar.
+          document.open(); document.write(r.html); document.close();
+        });
+      });
+    }).catch(function (e) {
+      mostrar('No se pudo descargar la app: ' + (e && e.message ? e.message : e), true);
+    });
+  }
+  iniciar();
+})();
+</script>
+</body>
+</html>
