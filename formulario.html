@@ -4,6 +4,8 @@
     formulario.html?form=roturas&dep=CAMPANA
     formulario.html?form=roturas&dep=ESCOBAR%202
     formulario.html?form=retiros
+    formulario.html?form=contenedor&dep=CAMPANA   (rotura en descarga de contenedores)
+    formulario.html?form=contenedor&dep=ESCOBAR%202
   Es el MISMO formulario que el link de Apps Script: se baja del servidor (T24_apiFormPublico) y queda
   guardado en el equipo, así la próxima vez abre al instante. Lo que se carga va a los mismos lugares.
 -->
@@ -40,7 +42,7 @@
   var form = String(q.get('form') || '').toLowerCase();
   var dep = String(q.get('dep') || '').toUpperCase().trim();
   var clave = 'formulario-' + form + (dep ? '-' + dep.replace(/\s+/g, '_') : '');
-  var nombres = { roturas: 'Roturas', retiros: 'Solicitud de retiros' };
+  var nombres = { roturas: 'Roturas', retiros: 'Solicitud de retiros', contenedor: 'Rotura de contenedores' };
   document.getElementById('titulo').textContent = (nombres[form] || 'Formulario') + (dep ? ' · ' + dep : '');
 
   function mostrar(texto, conBoton) {
