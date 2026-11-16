@@ -4,6 +4,8 @@
     formulario.html?form=roturas&dep=CAMPANA
     formulario.html?form=roturas&dep=ESCOBAR%202
     formulario.html?form=retiros
+    formulario.html?form=novedad&dep=CAMPANA
+    formulario.html?form=control&tipo=EXTINTORES&dep=CAMPANA   (un link por control y depósito)
     formulario.html?form=contenedor&dep=CAMPANA   (rotura en descarga de contenedores)
     formulario.html?form=contenedor&dep=ESCOBAR%202
   Es el MISMO formulario que el link de Apps Script: se baja del servidor (T24_apiFormPublico) y queda
@@ -41,8 +43,9 @@
   var q = new URLSearchParams(location.search);
   var form = String(q.get('form') || '').toLowerCase();
   var dep = String(q.get('dep') || '').toUpperCase().trim();
-  var clave = 'formulario-' + form + (dep ? '-' + dep.replace(/\s+/g, '_') : '');
-  var nombres = { roturas: 'Roturas', retiros: 'Solicitud de retiros', contenedor: 'Rotura de contenedores' };
+  var tipo = String(q.get('tipo') || '').toUpperCase().replace(/[^A-Z0-9_]/g, '');
+  var clave = 'formulario-' + form + (tipo ? '-' + tipo : '') + (dep ? '-' + dep.replace(/\s+/g, '_') : '');
+  var nombres = { roturas: 'Roturas', retiros: 'Solicitud de retiros', contenedor: 'Rotura de contenedores', control: 'Control operativo', novedad: 'Novedades' };
   document.getElementById('titulo').textContent = (nombres[form] || 'Formulario') + (dep ? ' · ' + dep : '');
 
   function mostrar(texto, conBoton) {
@@ -55,6 +58,7 @@
   function bajar() {
     var params = { form: form };
     if (dep) params.dep = dep;
+    if (tipo) params.tipo = tipo;
     return fetch(API, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
       body: JSON.stringify({ fn: 'T24_apiFormPublico', args: [params] })
