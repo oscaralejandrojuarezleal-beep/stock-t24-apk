@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!--
+  Formularios públicos de Stock T24 desde GitHub (16/11/2026).
+    formulario.html?form=roturas&dep=CAMPANA
+    formulario.html?form=roturas&dep=ESCOBAR%202
+    formulario.html?form=retiros
+  Es el MISMO formulario que el link de Apps Script: se baja del servidor (T24_apiFormPublico) y queda
+  guardado en el equipo, así la próxima vez abre al instante. Lo que se carga va a los mismos lugares.
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#003d32">
+<title>T24 · Formulario</title>
+<link rel="icon" href="icono-192.png">
+<style>
+  html,body{margin:0;height:100%;background:linear-gradient(160deg,#00261f,#003d32 55%,#0b6b57);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .caja{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;box-sizing:border-box;text-align:center}
+  h1{margin:0;font-size:24px;letter-spacing:.04em}
+  p{margin:0;max-width:340px;line-height:1.5;opacity:.92}
+  .rueda{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;animation:g 1s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+  button{border:0;border-radius:14px;padding:13px 22px;font-weight:800;font-size:15px;background:#fff;color:#003d32;cursor:pointer}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<div class="caja">
+  <h1 id="titulo">T24</h1>
+  <div id="rueda" class="rueda"></div>
+  <p id="mensaje">Abriendo formulario…</p>
+  <button id="reintentar" class="oculto" type="button">Reintentar</button>
+</div>
+<script>
+(function () {
+  var API = 'https://script.google.com/macros/s/AKfycbwqzbbx6GfSuEy-WbwyNfVb--T3Gnru87hpetct_S53qsCtn7QcMngn4mNoip8e4nS-/exec';
+  var CACHE = 't24-formularios';
+  var q = new URLSearchParams(location.search);
+  var form = String(q.get('form') || '').toLowerCase();
+  var dep = String(q.get('dep') || '').toUpperCase().trim();
+  var clave = 'formulario-' + form + (dep ? '-' + dep.replace(/\s+/g, '_') : '');
+  var nombres = { roturas: 'Roturas', retiros: 'Solicitud de retiros' };
+  document.getElementById('titulo').textContent = (nombres[form] || 'Formulario') + (dep ? ' · ' + dep : '');
+
+  function mostrar(texto, conBoton) {
+    document.getElementById('mensaje').textContent = texto;
+    document.getElementById('rueda').classList.toggle('oculto', !!conBoton);
+    document.getElementById('reintentar').classList.toggle('oculto', !conBoton);
+  }
+  document.getElementById('reintentar').onclick = function () { location.reload(); };
+
+  function bajar() {
+    var params = { form: form };
+    if (dep) params.dep = dep;
+    return fetch(API, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', cache: 'no-store',
+      body: JSON.stringify({ fn: 'T24_apiFormPublico', args: [params] })
+    }).then(function (r) { if (!r.ok) throw new Error('El servidor respondió ' + r.status); return r.text(); })
+      .then(function (t) {
+        var d = JSON.parse(t);
+        if (!d || d.ok !== true) throw new Error((d && d.error) || 'Error del servidor');
+        if (!d.r || d.r.ok !== true || !d.r.html) throw new Error((d.r && d.r.error) || 'El formulario llegó vacío');
+        return d.r.html;
+      });
+  }
+  function preparar(html) {
+    // La dirección del servidor tiene que estar antes que el puente.
+    var api = '<script>window.T24_API_URL=' + JSON.stringify(API) + ';try{localStorage.setItem("T24_API_URL",window.T24_API_URL)}catch(e){}<\/script>';
+    return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + api; }) : api + html;
+  }
+  function guardar(html) {
+    if (!window.caches) return Promise.resolve();
+    return caches.open(CACHE).then(function (c) { return c.put(clave, new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })); }).catch(function () {});
+  }
+  function leerGuardado() {
+    if (!window.caches) return Promise.resolve('');
+    return caches.open(CACHE).then(function (c) { return c.match(clave); }).then(function (r) { return r ? r.text() : ''; }).catch(function () { return ''; });
+  }
+  function escribir(html) { document.open(); document.write(preparar(html)); document.close(); }
+
+  if (!nombres[form]) { mostrar('Link incompleto. Pedí el link correcto del formulario.', false); document.getElementById('rueda').classList.add('oculto'); return; }
+
+  leerGuardado().then(function (guardado) {
+    if (guardado) {
+      // Abre al instante con lo guardado; cada 6 horas deja lista la versión nueva para la próxima vez
+      // (el formulario pesa varios MB: no se baja en cada apertura).
+      var marca = 'T24_FORM_' + clave, ult = 0;
+      try { ult = Number(localStorage.getItem(marca) || 0); } catch (e) {}
+      if (Date.now() - ult > 6 * 3600 * 1000) bajar().then(function (h) { try { localStorage.setItem(marca, String(Date.now())); } catch (e) {} return guardar(h); }).catch(function () {});
+      escribir(guardado);
+      return;
+    }
+    mostrar('Descargando el formulario… (sólo la primera vez)', false);
+    return bajar().then(function (html) { try { localStorage.setItem('T24_FORM_' + clave, String(Date.now())); } catch (e) {} return guardar(html).then(function () { escribir(html); }); });
+  }).catch(function (e) {
+    mostrar('No se pudo abrir el formulario: ' + (e && e.message ? e.message : e), true);
+  });
+})();
+</script>
+</body>
+</html>
