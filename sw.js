@@ -5,7 +5,7 @@
  * - Librerías externas (Bootstrap, íconos, fuentes, jsPDF…): se guardan la primera vez que se usan.
  * Los pedidos al servidor (Apps Script) NUNCA se guardan: siempre van directo.
  */
-var VERSION = 'v1';
+var VERSION = 'v2';
 var CASCARA = 't24-cascara-' + VERSION;
 var EXTERNOS = 't24-externos';
 var CONTENIDO = 't24-contenido';
@@ -40,6 +40,19 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(
       caches.open(CONTENIDO).then(function (c) { return c.match('app.html'); }).then(function (r) {
         return r || Response.redirect('./', 302);
+      })
+    );
+    return;
+  }
+
+  // Formularios públicos: siempre la versión nueva (si no hay internet, la guardada).
+  if (url.origin === location.origin && /\/formulario\.html$/.test(url.pathname)) {
+    e.respondWith(
+      caches.open(CASCARA).then(function (c) {
+        return fetch(req, { cache: 'no-store' }).then(function (res) {
+          if (res && res.ok) c.put(req, res.clone());
+          return res;
+        }).catch(function () { return c.match(req, { ignoreSearch: true }); });
       })
     );
     return;

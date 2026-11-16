@@ -81,7 +81,7 @@
   }
   function escribir(html) { document.open(); document.write(preparar(html)); document.close(); }
 
-  if (!nombres[form]) { mostrar('Link incompleto. Pedí el link correcto del formulario.', false); document.getElementById('rueda').classList.add('oculto'); return; }
+  if (!/^[a-z]{3,20}$/.test(form)) { mostrar('Link incompleto. Pedí el link correcto del formulario.', false); document.getElementById('rueda').classList.add('oculto'); return; }
 
   leerGuardado().then(function (guardado) {
     if (guardado) {
