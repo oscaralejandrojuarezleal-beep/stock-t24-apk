@@ -2,6 +2,7 @@ package com.t24.stock
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.Message
 import android.print.PrintAttributes
 import android.print.PrintManager
+import android.provider.MediaStore
 import android.view.ViewGroup
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -30,7 +32,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.core.content.FileProvider
 import androidx.webkit.WebViewAssetLoader
+import java.io.File
 
 /**
  * Pantalla única de la APK: un WebView que carga la misma app de Apps Script,
@@ -46,12 +50,84 @@ class MainActivity : ComponentActivity() {
     private val pedirPermisoNotificaciones =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    /** Foto que saca la cámara cuando se elige "Cámara" al subir archivos. */
+    private var fotoCamara: File? = null
+
     private val elegirArchivo =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
-            val uris = WebChromeClient.FileChooserParams.parseResult(resultado.resultCode, resultado.data)
-            archivosPendientes?.onReceiveValue(uris)
+            archivosPendientes?.onReceiveValue(urisElegidas(resultado.resultCode, resultado.data))
             archivosPendientes = null
         }
+
+    /**
+     * Archivos elegidos. Android devuelve varias fotos en "clipData" (y a veces una sola también),
+     * que el lector estándar ignora: por eso antes no cargaba nada al elegir fotos en roturas.
+     */
+    private fun urisElegidas(codigo: Int, data: Intent?): Array<Uri>? {
+        val foto = fotoCamara
+        fotoCamara = null
+        if (codigo != Activity.RESULT_OK) {
+            foto?.delete()
+            return null
+        }
+        val lista = LinkedHashSet<Uri>()
+        data?.clipData?.let { c -> for (i in 0 until c.itemCount) c.getItemAt(i)?.uri?.let { lista.add(it) } }
+        data?.data?.let { lista.add(it) }
+        if (foto != null) {
+            if (foto.length() <= 0) foto.delete()
+            else if (lista.isEmpty()) lista.add(FileProvider.getUriForFile(this, "$packageName.archivos", foto))
+        }
+        return if (lista.isEmpty()) null else lista.toTypedArray()
+    }
+
+    /** Elegir archivos: galería/archivos (una o varias) y, si acepta imágenes, también la cámara. */
+    private fun intentElegir(params: WebChromeClient.FileChooserParams): Intent {
+        val tipos = params.acceptTypes
+            .flatMap { it.split(",") }
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+        val varios = params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+        val elegir = Intent(Intent.ACTION_GET_CONTENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            when {
+                tipos.isEmpty() -> type = "*/*"
+                tipos.size == 1 && tipos[0].contains("/") -> type = tipos[0]
+                else -> {
+                    type = "*/*"
+                    val mimes = tipos.filter { it.contains("/") }
+                    if (mimes.isNotEmpty()) putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
+                }
+            }
+            if (varios) putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        }
+        val extras = mutableListOf<Intent>()
+        val aceptaImagen = tipos.isEmpty() || tipos.any { it.startsWith("image/") || it == "*/*" }
+        if (aceptaImagen) {
+            try {
+                val carpeta = File(cacheDir, "fotos").apply { mkdirs() }
+                carpeta.listFiles()?.forEach { if (System.currentTimeMillis() - it.lastModified() > 86_400_000L) it.delete() }
+                val archivo = File(carpeta, "foto_${System.currentTimeMillis()}.jpg")
+                val uri = FileProvider.getUriForFile(this, "$packageName.archivos", archivo)
+                val camara = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                    putExtra(MediaStore.EXTRA_OUTPUT, uri)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                if (camara.resolveActivity(packageManager) != null) {
+                    fotoCamara = archivo
+                    extras.add(camara)
+                }
+            } catch (e: Exception) {
+                fotoCamara = null
+            }
+        }
+        // <input capture> (botón "Sacar foto"): abre la cámara directo.
+        if (params.isCaptureEnabled && extras.isNotEmpty()) return extras[0]
+        if (fotoCamara != null && extras.isEmpty()) fotoCamara = null
+        return Intent.createChooser(elegir, "Elegir archivo").apply {
+            if (extras.isNotEmpty()) putExtra(Intent.EXTRA_INITIAL_INTENTS, extras.toTypedArray())
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -175,11 +251,18 @@ class MainActivity : ComponentActivity() {
                 archivosPendientes?.onReceiveValue(null)
                 archivosPendientes = filePathCallback
                 return try {
-                    elegirArchivo.launch(fileChooserParams.createIntent())
+                    elegirArchivo.launch(intentElegir(fileChooserParams))
                     true
-                } catch (e: ActivityNotFoundException) {
-                    archivosPendientes = null
-                    false
+                } catch (e: Exception) {
+                    // Si el selector propio falla, se usa el estándar de Android.
+                    fotoCamara = null
+                    try {
+                        elegirArchivo.launch(fileChooserParams.createIntent())
+                        true
+                    } catch (e2: ActivityNotFoundException) {
+                        archivosPendientes = null
+                        false
+                    }
                 }
             }
         }

@@ -2,4 +2,5 @@
 <paths>
     <cache-path name="compartidos" path="compartidos/" />
     <cache-path name="apk" path="apk/" />
+    <cache-path name="fotos" path="fotos/" />
 </paths>
