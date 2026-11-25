@@ -157,6 +157,7 @@ class MainActivity : ComponentActivity() {
             cacheMode = WebSettings.LOAD_DEFAULT
             textZoom = 100
         }
+        web.addJavascriptInterface(PuentePortal(this), "T24Portal")
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
 
