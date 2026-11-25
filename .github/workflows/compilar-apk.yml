@@ -16,6 +16,8 @@ on:
     branches: [main]
     paths-ignore:
       - '**.md'
+      - 'portal-empleados/**'
+      - '.github/workflows/portal-empleados.yml'
   workflow_dispatch:
 
 permissions:
