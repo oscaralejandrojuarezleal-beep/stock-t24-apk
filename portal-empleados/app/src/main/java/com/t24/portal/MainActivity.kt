@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Message
 import android.provider.MediaStore
@@ -42,6 +43,14 @@ import kotlin.concurrent.thread
 class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
+
+    private val permisoAvisos = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    fun pedirPermisoAvisos() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) permisoAvisos.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
     private var archivosPendientes: ValueCallback<Array<Uri>>? = null
     private var fotoCamara: File? = null
 
@@ -136,6 +145,8 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState) else web.loadUrl(Config.URL_PORTAL)
         revisarApkNueva()
+        Avisos.crearCanal(this)
+        Avisos.programar(this)
     }
 
     /** Hosts de Google que forman parte del portal: se quedan dentro de la app. */

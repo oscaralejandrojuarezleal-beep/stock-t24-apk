@@ -49,4 +49,17 @@ class PuentePortal(private val act: MainActivity) {
             act.runOnUiThread { Toast.makeText(act, "No se pudo guardar: ${e.message}", Toast.LENGTH_LONG).show() }
         }
     }
+
+    /** La web avisa que hay sesión: se activan los avisos al celular. */
+    @JavascriptInterface
+    fun registrarSesion(token: String) {
+        if (token.isNotBlank()) Avisos.registrar(act.applicationContext, token)
+        act.runOnUiThread { act.pedirPermisoAvisos() }
+    }
+
+    /** La web cerró sesión: se dejan de consultar avisos. */
+    @JavascriptInterface
+    fun cerrarSesion() {
+        Avisos.cerrar(act.applicationContext)
+    }
 }
