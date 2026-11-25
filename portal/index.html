@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!-- Portal de Empleados T24 — versión web para PC y celular. Abre la misma app de Apps Script que la APK. -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e2a20">
+<title>Portal de Empleados T24</title>
+<link rel="icon" href="../icono-192.png">
+<link rel="apple-touch-icon" href="../icono-192.png">
+<style>
+  html,body{margin:0;height:100%;background:#0e2a20;overflow:hidden}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f3f6f4}
+  #cargando{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .rueda{width:40px;height:40px;border-radius:50%;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;animation:g 1s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="cargando"><div class="rueda"></div><div>Abriendo Portal de Empleados T24…</div></div>
+<iframe id="portal" title="Portal de Empleados T24" allow="camera; clipboard-write; fullscreen"
+  onload="document.getElementById('cargando').style.display='none'"></iframe>
+<script>
+  var URL_PORTAL = 'https://script.google.com/macros/s/AKfycbwnkiG0jiSNtf0wFopT0LEdfR4ZfaKJZZHomVSiTz-m3bxtRzk2o9z7qI9V-Jz2--Ha/exec';
+  // Pasa los parámetros (por ejemplo ?public=he o ?sso=...) a la app.
+  document.getElementById('portal').src = URL_PORTAL + location.search;
+</script>
+</body>
+</html>
