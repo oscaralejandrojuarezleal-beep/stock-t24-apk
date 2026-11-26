@@ -31,6 +31,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -169,6 +171,14 @@ class MainActivity : ComponentActivity() {
             textZoom = 100
         }
         web.addJavascriptInterface(PuentePortal(this), "T24Portal")
+        // Oculta el cartel "Esta aplicación fue creada por un usuario de Google Apps Script":
+        // se ejecuta antes de que se dibuje la página, así ni se llega a ver.
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            try {
+                WebViewCompat.addDocumentStartJavaScript(web, SIN_CARTEL, setOf("https://script.google.com"))
+            } catch (e: Exception) {
+            }
+        }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
 
@@ -177,6 +187,14 @@ class MainActivity : ComponentActivity() {
                 if (esDelPortal(request.url)) return false
                 abrirAfuera(request.url)
                 return true
+            }
+
+            override fun onPageCommitVisible(view: WebView, url: String?) {
+                if (url?.startsWith("https://script.google.com/") == true) view.evaluateJavascript(SIN_CARTEL, null)
+            }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                if (url?.startsWith("https://script.google.com/") == true) view.evaluateJavascript(SIN_CARTEL, null)
             }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -223,6 +241,40 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /**
+         * Quita el cartel de Google de arriba y deja la app (el cuadro "sandboxFrame")
+         * ocupando toda la pantalla. Sólo actúa en la página principal de script.google.com.
+         */
+        private val SIN_CARTEL = """
+            (function(){
+              try{
+                if(window.top!==window||location.hostname!=='script.google.com')return;
+                if(window.__t24SinCartel)return; window.__t24SinCartel=1;
+                var css='html,body{margin:0!important;padding:0!important;overflow:hidden!important;height:100%!important;background:#F3F6F4!important}'+
+                  '#warning-bar-table,.warning-bar,[id*="warning"],[class*="warning"]{display:none!important;height:0!important}'+
+                  'iframe#sandboxFrame,iframe.t24-app{position:fixed!important;top:0!important;left:0!important;width:100%!important;height:100%!important;border:0!important;margin:0!important;z-index:2147483647!important}';
+                function estilo(){
+                  if(document.getElementById('t24-sin-cartel'))return;
+                  var r=document.head||document.documentElement; if(!r)return;
+                  var s=document.createElement('style'); s.id='t24-sin-cartel'; s.textContent=css; r.appendChild(s);
+                }
+                function marcar(){
+                  estilo();
+                  if(document.getElementById('sandboxFrame'))return;
+                  var fs=document.getElementsByTagName('iframe'),mejor=null,max=0;
+                  for(var i=0;i<fs.length;i++){var h=fs[i].offsetHeight*fs[i].offsetWidth;if(h>max){max=h;mejor=fs[i];}}
+                  if(mejor&&mejor.className.indexOf('t24-app')<0)mejor.className+=' t24-app';
+                }
+                estilo();
+                document.addEventListener('DOMContentLoaded',marcar);
+                window.addEventListener('load',marcar);
+                new MutationObserver(marcar).observe(document.documentElement,{childList:true,subtree:true});
+              }catch(e){}
+            })();
+        """.trimIndent()
     }
 
     private fun mostrarSinConexion() {
