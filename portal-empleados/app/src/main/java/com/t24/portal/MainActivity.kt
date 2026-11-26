@@ -254,7 +254,7 @@ class MainActivity : ComponentActivity() {
                 if(window.top!==window||location.hostname!=='script.google.com')return;
                 if(window.__t24SinCartel)return; window.__t24SinCartel=1;
                 var css='html,body{margin:0!important;padding:0!important;overflow:hidden!important;height:100%!important;background:#F3F6F4!important}'+
-                  '#warning-bar-table,.warning-bar,[id*="warning"],[class*="warning"]{display:none!important;height:0!important}'+
+                  'div#warning{display:none!important}'+
                   'iframe#sandboxFrame,iframe.t24-app{position:fixed!important;top:0!important;left:0!important;width:100%!important;height:100%!important;border:0!important;margin:0!important;z-index:2147483647!important}';
                 function estilo(){
                   if(document.getElementById('t24-sin-cartel'))return;
